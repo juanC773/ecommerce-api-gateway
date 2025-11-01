@@ -53,6 +53,7 @@ jobs:
         path: target/surefire-reports/*.xml
         reporter: java-junit
         fail-on-error: false
+        if-no-files-found: warn  # Permite continuar si no hay pruebas (servicios de configuración)
         
     - name: Package Application
       run: |
