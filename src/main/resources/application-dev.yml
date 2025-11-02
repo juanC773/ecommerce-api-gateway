@@ -17,6 +17,8 @@ logging:
       hibernate:
         SQL: DEBUG
       springframework:
+        cloud:
+          gateway: DEBUG  # Logging detallado del Gateway
         web: DEBUG
         data: DEBUG
       boot:
