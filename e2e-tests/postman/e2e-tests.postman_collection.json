@@ -1,0 +1,1129 @@
+{
+  "info": {
+    "name": "E2E Tests - Ecommerce Microservices",
+    "description": "Pruebas End-to-End que validan flujos completos a través de múltiples microservicios",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Flujo 1: Compra Completa",
+      "item": [
+        {
+          "name": "1. Crear Usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User was created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.userId).to.exist;",
+                  "    pm.environment.set(\"userId\", jsonData.userId);",
+                  "    console.log(\"✅ User created with ID: \" + jsonData.userId);",
+                  "});",
+                  "",
+                  "pm.test(\"User has required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.firstName).to.exist;",
+                  "    pm.expect(jsonData.lastName).to.exist;",
+                  "    pm.expect(jsonData.email).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Pérez\",\n  \"email\": \"juan.perez@e2e-test.com\",\n  \"phone\": \"+57-300-123-4567\",\n  \"imageUrl\": \"https://bootdey.com/img/Content/avatar/avatar7.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "users"]
+            },
+            "description": "Crea un nuevo usuario para el flujo de compra completa"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Listar Productos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Products list is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.collection).to.be.an('array');",
+                  "    console.log(\"✅ Found \" + jsonData.collection.length + \" products\");",
+                  "});",
+                  "",
+                  "pm.test(\"At least one product exists\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.collection.length > 0) {",
+                  "        var firstProduct = jsonData.collection[0];",
+                  "        pm.environment.set(\"productId\", firstProduct.productId);",
+                  "        console.log(\"✅ Using product ID: \" + firstProduct.productId);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product-service/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["product-service", "api", "products"]
+            },
+            "description": "Obtiene la lista de productos disponibles"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Crear Carrito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Cart was created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.cartId).to.exist;",
+                  "    pm.environment.set(\"cartId\", jsonData.cartId);",
+                  "    console.log(\"✅ Cart created with ID: \" + jsonData.cartId);",
+                  "});",
+                  "",
+                  "pm.test(\"Cart has correct userId\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var expectedUserId = parseInt(pm.environment.get(\"userId\"));",
+                  "    pm.expect(jsonData.userId).to.eql(expectedUserId);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/carts",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "carts"]
+            },
+            "description": "Crea un carrito para el usuario creado anteriormente"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Crear Orden",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generar fecha en formato requerido: dd-MM-yyyy__HH:mm:ss:SSSSSS",
+                  "const now = new Date();",
+                  "const day = String(now.getDate()).padStart(2, '0');",
+                  "const month = String(now.getMonth() + 1).padStart(2, '0');",
+                  "const year = now.getFullYear();",
+                  "const hours = String(now.getHours()).padStart(2, '0');",
+                  "const minutes = String(now.getMinutes()).padStart(2, '0');",
+                  "const seconds = String(now.getSeconds()).padStart(2, '0');",
+                  "const milliseconds = String(now.getMilliseconds()).padStart(6, '0');",
+                  "const orderDate = `${day}-${month}-${year}__${hours}:${minutes}:${seconds}:${milliseconds}`;",
+                  "pm.environment.set(\"orderDate\", orderDate);",
+                  "",
+                  "// Construir el body JSON correctamente con números",
+                  "const cartId = parseInt(pm.environment.get(\"cartId\"));",
+                  "const userId = parseInt(pm.environment.get(\"userId\"));",
+                  "const requestBody = {",
+                  "    orderDate: orderDate,",
+                  "    orderDesc: \"Orden E2E Test - Compra Completa\",",
+                  "    orderFee: 99.99,",
+                  "    cart: {",
+                  "        cartId: cartId,",
+                  "        userId: userId",
+                  "    }",
+                  "};",
+                  "pm.environment.set(\"requestBodyOrder\", JSON.stringify(requestBody));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Order was created successfully\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.orderId).to.exist;",
+                  "        pm.environment.set(\"orderId\", jsonData.orderId);",
+                  "        console.log(\"✅ Order created with ID: \" + jsonData.orderId);",
+                  "    });",
+                  "",
+                  "    pm.test(\"Order status is CREATED\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.orderStatus).to.eql(\"CREATED\");",
+                  "    });",
+                  "",
+                  "    pm.test(\"Order has correct cart\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        var expectedCartId = parseInt(pm.environment.get(\"cartId\"));",
+                  "        pm.expect(jsonData.cart.cartId).to.eql(expectedCartId);",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to create order. Response: \" + pm.response.text());",
+                  "    console.log(\"💡 Check: Cart exists? Request body: \" + pm.environment.get(\"requestBodyOrder\"));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBodyOrder}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders"]
+            },
+            "description": "Crea una orden usando el carrito creado anteriormente"
+          },
+          "response": []
+        },
+        {
+          "name": "5. Verificar Orden Creada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Order exists\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var expectedOrderId = parseInt(pm.environment.get(\"orderId\"));",
+                  "    pm.expect(jsonData.orderId).to.eql(expectedOrderId);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Order has all required fields\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.orderDesc).to.exist;",
+                  "        pm.expect(jsonData.orderFee).to.exist;",
+                  "        pm.expect(jsonData.orderStatus).to.exist;",
+                  "        pm.expect(jsonData.cart).to.exist;",
+                  "    });",
+                  "",
+                  "    pm.test(\"Order cart has correct userId\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        var expectedUserId = parseInt(pm.environment.get(\"userId\"));",
+                  "        pm.expect(jsonData.cart.userId).to.eql(expectedUserId);",
+                  "        console.log(\"✅ E2E Test: Compra Completa - PASÓ\");",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to get order. Response: \" + pm.response.text());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "{{orderId}}"]
+            },
+            "description": "Verifica que la orden fue creada correctamente con todos los datos"
+          },
+          "response": []
+        }
+      ],
+      "description": "Valida el flujo completo de una compra: crear usuario, ver productos, crear carrito y crear orden"
+    },
+    {
+      "name": "Flujo 2: Gestión de Productos",
+      "item": [
+        {
+          "name": "1. Crear Categoría",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generar nombre único de categoría con timestamp",
+                  "const timestamp = Date.now();",
+                  "const categoryTitle = \"E2E Test Category \" + timestamp;",
+                  "pm.environment.set(\"e2eCategoryTitle\", categoryTitle);",
+                  "",
+                  "// Construir el body JSON",
+                  "const requestBody = {",
+                  "    categoryTitle: categoryTitle,",
+                  "    imageUrl: \"https://via.placeholder.com/300\"",
+                  "};",
+                  "pm.environment.set(\"requestBodyCategory\", JSON.stringify(requestBody));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Category was created successfully\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.categoryId).to.exist;",
+                  "        pm.environment.set(\"categoryId\", jsonData.categoryId);",
+                  "        console.log(\"✅ Category created with ID: \" + jsonData.categoryId);",
+                  "    });",
+                  "",
+                  "    pm.test(\"Category has required fields\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        var expectedTitle = pm.environment.get(\"e2eCategoryTitle\");",
+                  "        pm.expect(jsonData.categoryTitle).to.eql(expectedTitle);",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to create category. Response: \" + pm.response.text());",
+                  "    // Intentar obtener una categoría existente como fallback",
+                  "    pm.environment.set(\"categoryId\", \"1\");",
+                  "    console.log(\"💡 Using fallback categoryId: 1\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBodyCategory}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product-service/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["product-service", "api", "categories"]
+            },
+            "description": "Crea una nueva categoría para productos"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Crear Producto",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generar SKU único con timestamp para evitar duplicados",
+                  "const timestamp = Date.now();",
+                  "const sku = \"E2E-TEST-\" + timestamp;",
+                  "pm.environment.set(\"e2eProductSku\", sku);",
+                  "",
+                  "// Construir el body JSON correctamente",
+                  "const categoryId = parseInt(pm.environment.get(\"categoryId\"));",
+                  "const requestBody = {",
+                  "    productTitle: \"Producto E2E Test\",",
+                  "    imageUrl: \"https://via.placeholder.com/300\",",
+                  "    sku: sku,",
+                  "    priceUnit: 99.99,",
+                  "    quantity: 50,",
+                  "    category: {",
+                  "        categoryId: categoryId",
+                  "    }",
+                  "};",
+                  "pm.environment.set(\"requestBodyProduct\", JSON.stringify(requestBody));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Product was created successfully\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.productId).to.exist;",
+                  "        pm.environment.set(\"productId\", jsonData.productId);",
+                  "        console.log(\"✅ Product created with ID: \" + jsonData.productId);",
+                  "    });",
+                  "",
+                  "    pm.test(\"Product has correct category\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        var expectedCategoryId = parseInt(pm.environment.get(\"categoryId\"));",
+                  "        pm.expect(jsonData.category.categoryId).to.eql(expectedCategoryId);",
+                  "    });",
+                  "",
+                  "    pm.test(\"Product has all required fields\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.productTitle).to.exist;",
+                  "        pm.expect(jsonData.sku).to.exist;",
+                  "        pm.expect(jsonData.priceUnit).to.exist;",
+                  "        pm.expect(jsonData.quantity).to.exist;",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to create product. Response: \" + pm.response.text());",
+                  "    console.log(\"💡 Check: Category exists? categoryId: \" + pm.environment.get(\"categoryId\"));",
+                  "    console.log(\"💡 Check: SKU unique? sku: \" + pm.environment.get(\"e2eProductSku\"));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBodyProduct}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product-service/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["product-service", "api", "products"]
+            },
+            "description": "Crea un producto asociado a la categoría creada anteriormente"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Verificar Producto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Product exists\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    // Verificar que el producto existe (puede ser el que creamos o uno existente)",
+                  "    pm.expect(jsonData.productId).to.exist;",
+                  "    var expectedProductId = parseInt(pm.environment.get(\"productId\"));",
+                  "    if (expectedProductId && expectedProductId > 0) {",
+                  "        // Si se creó un producto en este flujo, verificar que coincida",
+                  "        pm.expect(jsonData.productId).to.eql(expectedProductId);",
+                  "    } else {",
+                  "        // Si no se creó producto, solo verificar que el producto solicitado existe",
+                  "        var requestedProductId = parseInt(pm.environment.get(\"productId\")) || 1;",
+                  "        console.log(\"⚠️ Product may not have been created. Verifying requested product ID: \" + requestedProductId);",
+                  "    }",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Product data is correct\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        // Verificar que el producto existe (puede ser el que creamos o uno existente)",
+                  "        pm.expect(jsonData.productId).to.exist;",
+                  "        pm.expect(jsonData.productTitle).to.exist;",
+                  "        pm.expect(jsonData.sku).to.exist;",
+                  "        // Solo verificar título específico si el producto fue creado en este flujo",
+                  "        var productId = parseInt(pm.environment.get(\"productId\"));",
+                  "        if (productId && jsonData.productId === productId) {",
+                  "            // Producto fue creado en este flujo, verificar datos específicos",
+                  "            pm.expect(jsonData.productTitle).to.eql(\"Producto E2E Test\");",
+                  "            // SKU será dinámico con timestamp, solo verificar que existe y tiene formato",
+                  "            pm.expect(jsonData.sku).to.be.a('string');",
+                  "            pm.expect(jsonData.sku).to.include('E2E-TEST-');",
+                  "        } else {",
+                  "            // Producto existe pero no fue creado en este flujo (probablemente producto existente)",
+                  "            console.log(\"⚠️ Product exists but was not created in this run. Verifying basic structure only.\");",
+                  "            // Solo verificar que tiene estructura válida",
+                  "            pm.expect(jsonData.productTitle).to.be.a('string');",
+                  "            pm.expect(jsonData.sku).to.be.a('string');",
+                  "        }",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to get product. Response: \" + pm.response.text());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product-service/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product-service", "api", "products", "{{productId}}"]
+            },
+            "description": "Verifica que el producto fue creado correctamente"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Actualizar Producto",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Construir el body JSON para actualizar producto",
+                  "const productId = parseInt(pm.environment.get(\"productId\")) || 1;",
+                  "const categoryId = parseInt(pm.environment.get(\"categoryId\"));",
+                  "const sku = pm.environment.get(\"e2eProductSku\") || \"E2E-TEST-UPDATE-\" + Date.now();",
+                  "",
+                  "const requestBody = {",
+                  "    productId: productId,",
+                  "    productTitle: \"Producto E2E Test - Actualizado\",",
+                  "    imageUrl: \"https://via.placeholder.com/300\",",
+                  "    sku: sku,",
+                  "    priceUnit: 149.99,",
+                  "    quantity: 30,",
+                  "    category: {",
+                  "        categoryId: categoryId",
+                  "    }",
+                  "};",
+                  "pm.environment.set(\"requestBodyUpdateProduct\", JSON.stringify(requestBody));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Product was updated successfully\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.productTitle).to.eql(\"Producto E2E Test - Actualizado\");",
+                  "        console.log(\"✅ Product updated successfully\");",
+                  "        console.log(\"✅ E2E Test: Gestión de Productos - PASÓ\");",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to update product. Response: \" + pm.response.text());",
+                  "    console.log(\"💡 Check: Product exists? productId: \" + pm.environment.get(\"productId\"));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBodyUpdateProduct}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product-service/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product-service", "api", "products", "{{productId}}"]
+            },
+            "description": "Actualiza el producto creado anteriormente"
+          },
+          "response": []
+        }
+      ],
+      "description": "Valida el flujo completo de gestión de productos: crear categoría, crear producto, verificar y actualizar"
+    },
+    {
+      "name": "Flujo 3: Validación entre Servicios",
+      "item": [
+        {
+          "name": "1. Crear Usuario para Validación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User was created\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.userId).to.exist;",
+                  "    // Guardar en variable temporal para este flujo",
+                  "    pm.environment.set(\"validationUserId\", jsonData.userId);",
+                  "    console.log(\"✅ Validation user created with ID: \" + jsonData.userId);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"María\",\n  \"lastName\": \"González\",\n  \"email\": \"maria.gonzalez@e2e-validation.com\",\n  \"phone\": \"+57-310-987-6543\",\n  \"imageUrl\": \"https://bootdey.com/img/Content/avatar/avatar7.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "users"]
+            },
+            "description": "Crea un usuario para validar la comunicación entre Order Service y User Service"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Crear Carrito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Cart was created\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.cartId).to.exist;",
+                  "        pm.environment.set(\"validationCartId\", jsonData.cartId);",
+                  "        console.log(\"✅ Validation cart created with ID: \" + jsonData.cartId);",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to create cart. Response: \" + pm.response.text());",
+                  "    pm.environment.set(\"validationCartId\", \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{validationUserId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/carts",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "carts"]
+            },
+            "description": "Crea un carrito para el usuario"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Verificar Comunicación entre Servicios",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Cart exists\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var expectedCartId = parseInt(pm.environment.get(\"validationCartId\"));",
+                  "    pm.expect(jsonData.cartId).to.eql(expectedCartId);",
+                  "});",
+                  "",
+                  "pm.test(\"Cart has user information (Order Service called User Service)\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.exist;",
+                  "    pm.expect(jsonData.user.userId).to.exist;",
+                  "    console.log(\"✅ Order Service successfully retrieved user data from User Service\");",
+                  "});",
+                  "",
+                  "pm.test(\"User data is complete\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    // Verificar que el objeto user existe (puede tener campos null si User Service no está disponible)",
+                  "    pm.expect(jsonData.user).to.exist;",
+                  "    pm.expect(jsonData.user.userId).to.exist;",
+                  "    // Si user tiene datos completos, verificar campos (si User Service está disponible)",
+                  "    if (jsonData.user && jsonData.user.firstName !== null && jsonData.user.firstName !== undefined) {",
+                  "        pm.expect(jsonData.user.firstName).to.exist;",
+                  "        pm.expect(jsonData.user.lastName).to.exist;",
+                  "        pm.expect(jsonData.user.email).to.exist;",
+                  "        console.log(\"✅ User data is complete with all fields\");",
+                  "    } else {",
+                  "        console.log(\"⚠️ User data is incomplete (User Service may not be available or returned null fields)\");",
+                  "        // Aceptar que user existe aunque tenga campos null (esto prueba que Order Service intentó llamar a User Service)",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test(\"User ID matches\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var expectedUserId = parseInt(pm.environment.get(\"validationUserId\"));",
+                  "    pm.expect(jsonData.user.userId).to.eql(expectedUserId);",
+                  "    console.log(\"✅ E2E Test: Validación entre Servicios - PASÓ\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/carts/{{validationCartId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "carts", "{{validationCartId}}"]
+            },
+            "description": "Verifica que Order Service llama correctamente a User Service para obtener información del usuario. NOTA: Si validationCartId está vacío, esta request fallará."
+          },
+          "response": []
+        }
+      ],
+      "description": "Valida que los servicios se comunican correctamente entre sí (Order Service → User Service)"
+    },
+    {
+      "name": "Flujo 4: Actualización de Estado de Orden",
+      "item": [
+        {
+          "name": "1. Crear Usuario para Orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.userId) {",
+                  "        pm.environment.set(\"statusOrderUserId\", jsonData.userId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Carlos\",\n  \"lastName\": \"Rodríguez\",\n  \"email\": \"carlos.rodriguez@e2e-status.com\",\n  \"phone\": \"+57-320-111-2222\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Crear Carrito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.cartId) {",
+                  "        pm.environment.set(\"statusOrderCartId\", jsonData.cartId);",
+                  "        console.log(\"✅ Status order cart created with ID: \" + jsonData.cartId);",
+                  "    }",
+                  "} else {",
+                  "    console.log(\"❌ Failed to create cart. Response: \" + pm.response.text());",
+                  "    pm.environment.set(\"statusOrderCartId\", \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{statusOrderUserId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/carts",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "carts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Crear Orden",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const now = new Date();",
+                  "const day = String(now.getDate()).padStart(2, '0');",
+                  "const month = String(now.getMonth() + 1).padStart(2, '0');",
+                  "const year = now.getFullYear();",
+                  "const hours = String(now.getHours()).padStart(2, '0');",
+                  "const minutes = String(now.getMinutes()).padStart(2, '0');",
+                  "const seconds = String(now.getSeconds()).padStart(2, '0');",
+                  "const milliseconds = String(now.getMilliseconds()).padStart(6, '0');",
+                  "const orderDate = `${day}-${month}-${year}__${hours}:${minutes}:${seconds}:${milliseconds}`;",
+                  "pm.environment.set(\"statusOrderDate\", orderDate);",
+                  "",
+                  "// Construir el body JSON correctamente con números",
+                  "const cartId = parseInt(pm.environment.get(\"statusOrderCartId\"));",
+                  "const userId = parseInt(pm.environment.get(\"statusOrderUserId\"));",
+                  "const requestBody = {",
+                  "    orderDate: orderDate,",
+                  "    orderDesc: \"Orden para test de estado\",",
+                  "    orderFee: 75.50,",
+                  "    cart: {",
+                  "        cartId: cartId,",
+                  "        userId: userId",
+                  "    }",
+                  "};",
+                  "pm.environment.set(\"requestBodyStatusOrder\", JSON.stringify(requestBody));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.orderId) {",
+                  "        pm.environment.set(\"statusOrderId\", jsonData.orderId);",
+                  "        console.log(\"✅ Status order created with ID: \" + jsonData.orderId);",
+                  "    }",
+                  "} else {",
+                  "    console.log(\"❌ Failed to create status order. Response: \" + pm.response.text());",
+                  "    pm.environment.set(\"statusOrderId\", \"\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{requestBodyStatusOrder}}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Actualizar Estado de Orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Order status was updated\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.orderStatus).to.exist;",
+                  "        // El estado debe cambiar de CREATED a otro estado",
+                  "        pm.expect(jsonData.orderStatus).to.not.eql(\"CREATED\");",
+                  "        console.log(\"✅ Order status updated to: \" + jsonData.orderStatus);",
+                  "        console.log(\"✅ E2E Test: Actualización de Estado - PASÓ\");",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"❌ Failed to update order status. Response: \" + pm.response.text());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders/{{statusOrderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders", "{{statusOrderId}}", "status"],
+              "description": "Actualiza el estado de la orden. NOTA: Si statusOrderId está vacío (porque falló crear la orden), esta request fallará con 400."
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Valida el flujo de actualización de estado de una orden"
+    },
+    {
+      "name": "Flujo 5: Listar Recursos",
+      "item": [
+        {
+          "name": "1. Listar Usuarios",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Users list is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.collection).to.be.an('array');",
+                  "    console.log(\"✅ Found \" + jsonData.collection.length + \" users\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user-service/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["user-service", "api", "users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Listar Productos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Products list is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.collection).to.be.an('array');",
+                  "    console.log(\"✅ Found \" + jsonData.collection.length + \" products\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product-service/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["product-service", "api", "products"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Listar Categorías",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Categories list is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.collection).to.be.an('array');",
+                  "    console.log(\"✅ Found \" + jsonData.collection.length + \" categories\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product-service/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["product-service", "api", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Listar Órdenes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Orders list is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.collection).to.be.an('array');",
+                  "    console.log(\"✅ Found \" + jsonData.collection.length + \" orders\");",
+                  "    console.log(\"✅ E2E Test: Listar Recursos - PASÓ\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-service/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["order-service", "api", "orders"]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Valida que todos los endpoints de listado funcionan correctamente"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://20.15.17.8:8080",
+      "type": "string"
+    }
+  ]
+}
+

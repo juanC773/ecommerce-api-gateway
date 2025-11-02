@@ -167,6 +167,19 @@ Para obtener la IP pública:
 kubectl get svc api-gateway -n ecommerce-dev
 ```
 
+## E2E Tests
+
+Este repositorio contiene los **tests E2E del sistema completo** en la carpeta `e2e-tests/`.
+
+**¿Por qué aquí?**
+- El API Gateway es el **punto de entrada** de todas las peticiones E2E
+- Los pipelines de Stage (User, Product, Order) hacen checkout de este repositorio para ejecutar los tests
+- Es el lugar más lógico para centralizar los tests de todo el sistema
+
+**Ubicación**: `e2e-tests/postman/`
+
+**Ver**: [E2E Tests README](e2e-tests/README.md) para más detalles sobre cómo ejecutar los tests.
+
 ## 📝 Notas Importantes
 
 ### Paths y Context Paths
