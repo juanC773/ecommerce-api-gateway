@@ -28,3 +28,14 @@ logging:
             jpa: DEBUG
             orm: DEBUG
 
+# Configuración Eureka - Usa variables de entorno desde ConfigMap en Kubernetes
+# En local usa localhost, en K8s usa service-discovery.ecommerce-dev.svc.cluster.local
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:false}
+
