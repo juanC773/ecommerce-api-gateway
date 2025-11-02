@@ -1,10 +1,10 @@
 # API Gateway
 
-## 📋 Descripción
+##  Descripción
 
 API Gateway es el **punto de entrada único** para todas las peticiones HTTP que llegan a los microservicios. Implementa el patrón de API Gateway usando **Spring Cloud Gateway**, proporcionando enrutamiento, balanceo de carga, CORS y circuit breaker.
 
-## 🎯 Propósito
+##  Propósito
 
 - **Punto de Entrada Único**: Un solo puerto (8080) para acceder a todos los servicios
 - **Enrutamiento Inteligente**: Enruta peticiones según el path (`/product-service/**`, `/order-service/**`, etc.)
@@ -13,7 +13,7 @@ API Gateway es el **punto de entrada único** para todas las peticiones HTTP que
 - **CORS**: Configurado para permitir peticiones desde frontend
 - **Circuit Breaker**: Protege contra fallos en cascada
 
-## 🏗️ Arquitectura
+##  Arquitectura
 
 ```
 ┌─────────────┐
@@ -58,7 +58,7 @@ El gateway enruta las peticiones según el path:
 
 **Nota**: `lb://` significa "Load Balancer" y usa Eureka para descubrir las instancias.
 
-## 🔌 Ejemplos de Uso
+##  Ejemplos de Uso
 
 ### Product Service
 ```bash
@@ -87,7 +87,7 @@ GET http://20.15.17.8:8080/user-service/api/users
 POST http://20.15.17.8:8080/user-service/api/users
 ```
 
-## 🌐 CORS Configuration
+##  CORS Configuration
 
 El gateway está configurado para permitir peticiones CORS desde:
 
@@ -98,7 +98,7 @@ allowed-headers: "*"
 allow-credentials: true
 ```
 
-## ⚡ Timeouts
+##  Timeouts
 
 ```yaml
 httpclient:
@@ -106,7 +106,7 @@ httpclient:
   response-timeout: 30s         # 30 segundos para respuesta
 ```
 
-## 🛡️ Circuit Breaker
+##  Circuit Breaker
 
 El gateway usa **Resilience4j** para proteger contra fallos:
 
@@ -118,7 +118,7 @@ resilience4j:
     wait-duration-in-open-state: 5s     # Espera 5s antes de reintentar
 ```
 
-## 🔗 Integración con Eureka
+##  Integración con Eureka
 
 El gateway se registra en Eureka y usa Eureka para descubrir servicios:
 
@@ -139,7 +139,7 @@ EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
 EUREKA_INSTANCE_HOSTNAME: "api-gateway.ecommerce-dev.svc.cluster.local"
 ```
 
-## 🚀 Despliegue
+##  Despliegue
 
 ### Desarrollo Local
 
@@ -173,8 +173,8 @@ kubectl get svc api-gateway -n ecommerce-dev
 
 Los microservicios tienen context paths (ej: `/product-service`), por lo tanto:
 
-✅ **Correcto**: `GET /product-service/api/products`  
-❌ **Incorrecto**: `GET /api/products`
+ **Correcto**: `GET /product-service/api/products`  
+ **Incorrecto**: `GET /api/products`
 
 El gateway NO elimina el prefijo (`/product-service`), lo pasa completo al servicio.
 
@@ -203,17 +203,3 @@ El API Gateway debe iniciar después de:
 GET http://20.15.17.8:8080/actuator/health
 ```
 
-## 🧪 Testing
-
-Este servicio tiene un intento de pruebas unitarias pero puede ejecutarse sin ellas (configurado con `|| true` en el pipeline).
-
-No requiere pruebas E2E complejas ya que es principalmente enrutamiento.
-
-## 📚 Referencias
-
-- [Spring Cloud Gateway Documentation](https://spring.io/projects/spring-cloud-gateway)
-- [Resilience4j Circuit Breaker](https://resilience4j.readme.io/docs/circuitbreaker)
-
----
-
-**Estado**: ✅ Servicio de Infraestructura - Estable y Documentado
