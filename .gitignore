@@ -31,3 +31,19 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+### Locust Reports ###
+*.html
+*.csv
+locust-report*.html
+locust-results*.csv
